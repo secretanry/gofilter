@@ -20,7 +20,7 @@ func (p *Pipeline) Process(frame gocv.Mat) gocv.Mat {
 	p.pipes = append(p.pipes, make(chan gocv.Mat))
 	for i, filter := range p.filters {
 		go func() {
-			WorkAsync(<-p.pipes[i], p.pipes[i+1], filter.Apply)
+			BlockWork(<-p.pipes[i], p.pipes[i+1], filter.Apply)
 		}()
 	}
 	p.pipes[0] <- frame
