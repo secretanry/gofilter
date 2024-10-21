@@ -2,18 +2,19 @@ package modules
 
 import (
 	"fmt"
-	"gocv.io/x/gocv"
 	"gofilter/objects"
 	"gofilter/objects/pipeline"
+
+	"gocv.io/x/gocv"
 )
 
 func initPipeline() *pipeline.Pipeline {
-	pipelineInstance := &pipeline.Pipeline{}
-	pipelineInstance.AddFilter(&objects.GrayscaleFilter{})
-	pipelineInstance.AddFilter(&objects.MirrorFilter{})
-	pipelineInstance.AddFilter(&objects.ResizeFilter{Width: 400, Height: 300})
-	pipelineInstance.AddFilter(&objects.BlurFilter{Size: 10})
-	return pipelineInstance
+	pipe := pipeline.New()
+	pipe.AddFilter(objects.NewGrayscaleFilter())
+	pipe.AddFilter(objects.NewMirrorFilter())
+	pipe.AddFilter(objects.NewResizeFilter(400, 300))
+	pipe.AddFilter(objects.NewBlurFilter(10))
+	return pipe
 }
 
 func StartApp() {
@@ -48,12 +49,7 @@ func StartApp() {
 
 		source.Display(sourceWindow, frame)
 
-		resultChan := make(chan gocv.Mat)
-		go func() {
-			processedFrame := pipeline.Process(frame)
-			resultChan <- processedFrame
-		}()
-		sink.Display(sinkWindow, <-resultChan)
+		sink.Display(sinkWindow, pipeline.Process(frame))
 
 		if sinkWindow.WaitKey(1) == 'q' {
 			break
