@@ -2,29 +2,33 @@ package pipeline
 
 import (
 	"gocv.io/x/gocv"
-	"gofilter/objects"
 )
 
-// Pipeline to sequentially pass frames through filters
 type Pipeline struct {
-	filters []objects.Filter
-	pipes   []chan gocv.Mat
+	entry chan gocv.Mat
+	in    chan gocv.Mat
+	out   chan gocv.Mat
 }
 
-func (p *Pipeline) AddFilter(filter objects.Filter) {
-	p.filters = append(p.filters, filter)
-	p.pipes = append(p.pipes, make(chan gocv.Mat))
+func New() *Pipeline {
+	c := make(chan gocv.Mat)
+	return &Pipeline{
+		entry: c,
+		in:    c,
+	}
+}
+
+func (p *Pipeline) AddFilter(in chan gocv.Mat, out chan gocv.Mat) {
+	go func(c chan gocv.Mat) {
+		for f := range c {
+			in <- f
+		}
+	}(p.in)
+	p.in = out
+	p.out = out
 }
 
 func (p *Pipeline) Process(frame gocv.Mat) gocv.Mat {
-	p.pipes = append(p.pipes, make(chan gocv.Mat))
-	for i, filter := range p.filters {
-		go func() {
-			BlockWork(<-p.pipes[i], p.pipes[i+1], filter.Apply)
-		}()
-	}
-	p.pipes[0] <- frame
-	result := <-p.pipes[len(p.filters)]
-	p.pipes = p.pipes[:len(p.filters)]
-	return result
+	p.entry <- frame
+	return <-p.out
 }
